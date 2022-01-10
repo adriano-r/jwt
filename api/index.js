@@ -24,9 +24,11 @@ let refreshTokens = [];
 app.post("/api/refresh", (req, res) => {
 	// Take the refresh token from the user
 	const refreshToken = req.body.token;
+
 	// Send error if there is no token or it's invalid
-	if (!refreshToken)
+	if (!refreshToken) {
 		return res.status(401).json("You are not authenticated!");
+	}
 	if (!refreshTokens.includes(refreshToken)) {
 		return res.status(403).json("Refresh token is not valid!");
 	}
@@ -48,13 +50,16 @@ app.post("/api/refresh", (req, res) => {
 });
 
 const generateAccessToken = (user) => {
-	jwt.sign({ id: user.id, isAdmin: user.isAdmin }, "mySecretKey", {
-		expiresIn: "15m",
+	return jwt.sign({ id: user.id, isAdmin: user.isAdmin }, "mySecretKey", {
+		expiresIn: "5s",
 	});
 };
 
 const generateRefreshToken = (user) => {
-	jwt.sign({ id: user.id, isAdmin: user.isAdmin }, "myRefreshSecretKey");
+	return jwt.sign(
+		{ id: user.id, isAdmin: user.isAdmin },
+		"myRefreshSecretKey"
+	);
 };
 
 app.post("/api/login", (req, res) => {
@@ -78,7 +83,6 @@ app.post("/api/login", (req, res) => {
 		res.status(400).json("Username or password incorrect");
 	}
 });
-
 const verify = (req, res, next) => {
 	const authHeader = req.headers.authorization;
 	if (authHeader) {
@@ -86,7 +90,7 @@ const verify = (req, res, next) => {
 
 		jwt.verify(token, "mySecretKey", (err, user) => {
 			if (err) {
-				return res.status(401).json("Token is not valid!");
+				return res.status(403).json("Token is not valid!");
 			}
 
 			req.user = user;
@@ -103,6 +107,12 @@ app.delete("/api/users/:userId", verify, (req, res) => {
 	} else {
 		res.status(403).json("You are not allowed to delete this user!");
 	}
+});
+
+app.post("/api/logout", verify, (req, res) => {
+	const refreshToken = req.body.token;
+	refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+	res.status(200).json("You logged out successfully.");
 });
 
 app.listen(5000, () => console.log("backend is running"));
